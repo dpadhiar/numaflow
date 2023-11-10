@@ -43,7 +43,7 @@ func (s *APISuite) TestISBSVC() {
 	var err error
 	numaflowServerPodName := s.GetNumaflowServerPodName()
 	if numaflowServerPodName == "" {
-		panic("failed to find the nuamflow-server pod")
+		panic("failed to find the numaflow-server pod")
 	}
 	stopPortForward := s.StartPortForward(numaflowServerPodName, 8443)
 
@@ -55,6 +55,13 @@ func (s *APISuite) TestISBSVC() {
 		Status(200).Body().Raw()
 	var createISBSVCSuccessExpect = `{"data":null}`
 	assert.Contains(s.T(), createISBSVCBody, createISBSVCSuccessExpect)
+
+	err = json.Unmarshal(testISBSVCSpecUpdate, &testISBSVC)
+	assert.NoError(s.T(), err)
+	updateISBSVCBody := HTTPExpect(s.T(), "https://localhost:8443").PUT(fmt.Sprintf("/api/v1/namespaces/%s/isb-services/%s", Namespace, testISBSVCName)).WithJSON(testISBSVC).
+		Expect().
+		Status(200).Body().Raw()
+	assert.Contains(s.T(), updateISBSVCBody, `"replicas":5`)
 
 	listISBSVCBody := HTTPExpect(s.T(), "https://localhost:8443").GET(fmt.Sprintf("/api/v1/namespaces/%s/isb-services", Namespace)).
 		Expect().
@@ -95,7 +102,7 @@ func (s *APISuite) TestISBSVCReplica1() {
 	var err error
 	numaflowServerPodName := s.GetNumaflowServerPodName()
 	if numaflowServerPodName == "" {
-		panic("failed to find the nuamflow-server pod")
+		panic("failed to find the numaflow-server pod")
 	}
 	stopPortForward := s.StartPortForward(numaflowServerPodName, 8443)
 
@@ -146,7 +153,7 @@ func (s *APISuite) TestPipeline0() {
 	var err error
 	numaflowServerPodName := s.GetNumaflowServerPodName()
 	if numaflowServerPodName == "" {
-		panic("failed to find the nuamflow-server pod")
+		panic("failed to find the numaflow-server pod")
 	}
 	stopPortForward := s.StartPortForward(numaflowServerPodName, 8443)
 
@@ -171,6 +178,13 @@ func (s *APISuite) TestPipeline0() {
 	var createPipelineSuccessExpect = `{"data":null}`
 	assert.Contains(s.T(), createPipeline1, createPipelineSuccessExpect)
 	assert.Contains(s.T(), createPipeline2, createPipelineSuccessExpect)
+
+	err = json.Unmarshal(testPipeline1Update, &pl1)
+	assert.NoError(s.T(), err)
+	updatePipeline1 := HTTPExpect(s.T(), "https://localhost:8443").PUT(fmt.Sprintf("/api/v1/namespaces/%s/pipelines/%s", Namespace, testPipeline1Name)).WithJSON(pl1).
+		Expect().
+		Status(200).Body().Raw()
+	assert.Contains(s.T(), updatePipeline1, createPipelineSuccessExpect)
 
 	clusterSummaryBody := HTTPExpect(s.T(), "https://localhost:8443").GET("/api/v1/cluster-summary").
 		Expect().
@@ -202,7 +216,7 @@ func (s *APISuite) TestPipeline1() {
 	defer cancel()
 	numaflowServerPodName := s.GetNumaflowServerPodName()
 	if numaflowServerPodName == "" {
-		panic("failed to find the nuamflow-server pod")
+		panic("failed to find the numaflow-server pod")
 	}
 	stopPortForward := s.StartPortForward(numaflowServerPodName, 8443)
 
@@ -265,6 +279,30 @@ func (s *APISuite) TestPipeline1() {
 		Status(200).Body().Raw()
 	assert.Contains(s.T(), getVerticesPodsBody, `simple-pipeline-input-0`)
 
+	// getPodLogs := HTTPExpect(s.T(), "https://localhost:8443").GET(fmt.Sprintf("/api/v1/namespaces/%s/pods/%s/logs", Namespace, `simple-pipeline-input-0`)).
+	// 	Expect().
+	// 	Status(200).Body().Raw()
+	// assert.Contains(s.T(), getPodLogs, "")
+
+	events := HTTPExpect(s.T(), "https://localhost:8443").GET(fmt.Sprintf("/api/v1/namespaces/%s/events", Namespace)).
+		Expect().
+		Status(200).Body().Raw()
+	assert.NotEmpty(s.T(), events)
+
+	stopPortForward()
+}
+
+func (s *APISuite) TestGetEvents() {
+	numaflowServerPodName := s.GetNumaflowServerPodName()
+	if numaflowServerPodName == "" {
+		panic("failed to find the numaflow-server pod")
+	}
+	stopPortForward := s.StartPortForward(numaflowServerPodName, 8443)
+	events := HTTPExpect(s.T(), "https://localhost:8443").GET(fmt.Sprintf("/api/v1/namespaces/%s/events", Namespace)).
+		Expect().
+		Status(200).Body().Raw()
+	var eventsExpect = ``
+	assert.Contains(s.T(), events, eventsExpect)
 	stopPortForward()
 }
 
